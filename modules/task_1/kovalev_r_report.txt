@@ -1,0 +1,887 @@
+\documentclass{report}
+
+\usepackage[warn]{mathtext}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{luainputenc}
+\usepackage[english, russian]{babel}
+\usepackage[pdftex]{hyperref}
+\usepackage{tempora}
+\usepackage[12pt]{extsizes}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{indentfirst}
+\usepackage{amsmath}
+
+\geometry{a4paper,top=2cm,bottom=2cm,left=2.5cm,right=1.5cm}
+\setlength{\parskip}{0.5cm}
+\setlist{nolistsep, itemsep=0.3cm,parsep=0pt}
+
+\usepackage{listings}
+\lstset{language=C++,
+        basicstyle=\footnotesize,
+		keywordstyle=\color{blue}\ttfamily,
+		stringstyle=\color{red}\ttfamily,
+		commentstyle=\color{green}\ttfamily,
+		morecomment=[l][\color{red}]{\#}, 
+		tabsize=4,
+		breaklines=true,
+  		breakatwhitespace=true,
+  		title=\lstname,       
+}
+
+\makeatletter
+\renewcommand\@biblabel[1]{#1.\hfil}
+\makeatother
+
+\begin{document}
+
+\begin{titlepage}
+
+\begin{center}
+Министерство науки и высшего образования Российской Федерации
+\end{center}
+
+\begin{center}
+Федеральное государственное автономное образовательное учреждение высшего образования \\
+Национальный исследовательский Нижегородский государственный университет им. Н.И. Лобачевского
+\end{center}
+
+\begin{center}
+Институт информационных технологий, математики и механики
+\end{center}
+
+\vspace{4em}
+
+\begin{center}
+\textbf{\LargeОтчет по лабораторной работе} \\
+\end{center}
+\begin{center}
+\textbf{\Large«Поразрядная сортировка для целых чисел с четно-нечетным слиянием Бэтчера.»} \\
+\end{center}
+
+\vspace{4em}
+
+\newbox{\lbox}
+\savebox{\lbox}{\hbox{text}}
+\newlength{\maxl}
+\setlength{\maxl}{\wd\lbox}
+\hfill\parbox{7cm}{
+\hspace*{5cm}\hspace*{-5cm}\textbf{Выполнил:} \\ студент группы 381906-1 \\ Ковалёв Р.И.\\
+\\
+\hspace*{5cm}\hspace*{-5cm}\textbf{Проверил:}\\ доцент кафедры МОСТ, \\ кандидат технических наук \\ Сысоев А. В.\\
+}
+\vspace{\fill}
+
+\begin{center} Нижний Новгород \\ 2022 \end{center}
+
+\end{titlepage}
+
+\setcounter{page}{2}
+
+% Содержание
+\tableofcontents
+\newpage
+
+% Введение
+\section*{Введение}
+\addcontentsline{toc}{section}{Введение}
+\par Поразрядная сортировка - это несравнительный алгоритм, т.е. алгоритм не сортирует элементы, сравнивая их между собой, а перебирает по порядку и  группирует по определённому признаку, в моём случае этим признаком является разряд числа. Поразрядная сортировка применима к лексиграфическим типам данных, такие как числа и строки. В данной лабораторной работе типом данных является целое число, которое легко можно поделить на разряды: единицы, десятки,сотни, тысячи и т.д. Поскольку сравнивать разряды между собой можно начинать как с большего, так и с меньшего, то поразрядная сортировка имеет две реализации, а именно LSD(least significant digit) и MSD(most significant digit). LSD сортировка начинается с наименее значащего разряда, а MSD с наиболее значащего.  Относительно целых чисел гораздо удобнее будет использовать LSD реализацию.
+
+\newpage
+
+% Постановка задачи
+\section*{Постановка задачи}
+\addcontentsline{toc}{section}{Постановка задачи}
+\par Цель лабораторной рботы состоит в следующих задачах:
+\begin{itemize}
+\item Реализация последовательного алгоритма поразрядной сортировки.
+\item Реализация параллельного алгоритма поразрядной сортировки используя OpenMP.
+\item Реализация параллельного алгоритма поразрядной сортировки используя TBB.
+\item Исследование времени выполнения алгоритмов и сравнение их эффективности между собой.
+\item Сделать выводы на основе выполненных тестов и экспериментов.
+\end{itemize}
+Так же необходимо убедиться в корректности работы каждой программы. Для этого необходимо для каждой версии реализации написать ряд тестов с использованием Google C++ Testing Framework.
+\newpage
+
+% Описание алгоритма
+\section*{Описание алгоритма}
+\addcontentsline{toc}{section}{Описание алгоритма}
+\par Поразрядная сортировка заключается в том, что элементы перебираются по порядку и группируются по значению цифры в самом младшем разряде, затем выстраивается новая последовательность данных, а именно, начиная с нулевой группы, мы достаём числа и заносим в новый массив, затем достаём числа из первой группы, потом из второй, из третей, и так до девятой группы. После, уже для новго массива данных, нам нужно снова перебрать последовательность и сгруппировать по значению цифры второго разряда,затем по третьему разряду и так до самого наибольшего разряда. В итоге будем иметь отсортированный массив данных, полученный поразрядной сортировкой со сложностью O($n*k$), где $k$ - максимальный разряд числа. Поскольку максимальный разряд, как правило, намного меньше количества чисел в массиве, то сложность алгоритма и вовсе можно считать линейной. Однако существенным недостатком данного алгоритма сортировки явлется выделение дополнительной памяти. 
+\newpage
+
+% Описание схемы распараллеливания
+\section*{Описание схемы распараллеливания}
+\addcontentsline{toc}{section}{Описание схемы распараллеливания}
+\par Суть распараллеливания поразрядной сортировки заключается в том, что изначальный массив данных разбивается на два подмассива. В одном массиве хранятся элементы, которые были на чётных позиция в исходном массиве, в другом - на нечётных. Далее каждый массив разбивается на массивы при помощи потоков,
+каждый из которых вызывает последовательную сортировку для своего подмассива и записывает данные в двумерный вектор реультатов.
+\newpage
+
+% Описание программной реализации
+\section*{Описание программной реализации}
+\addcontentsline{toc}{section}{Описание программной реализации}
+\subsection*{OpenMP}
+\addcontentsline{toc}{subsection}{OpenMP}
+\par Программа, реализующая поразрядную сортировку с помощью технологии omp, состоит из одного заголовочного файла radix\_sort\_omp.h и двух файлов исходного кода: radix\_sort\_omp.cpp и main.cpp.
+\par В заголовочном файле определены прототипы следующих функций:
+\par Создание и заполнение вектора случайными данными \par
+\begin{lstlisting}
+void vec_gen(std::vector<int>* vec, int len);
+\end{lstlisting}
+\par Последовательная реализация поразрядной сортировки \par
+\begin{lstlisting}
+void radixSort(std::vector<int>* main_data, int size, int offset);
+\end{lstlisting}
+\par Функция поиска максимального числа в массиве. У такого числа максимальное количество разрядов \par
+\begin{lstlisting}
+int getMax(std::vector<int> *arr, int sz);
+\end{lstlisting}
+\par Параллельная реализация поразрядной сортировки \par
+\begin{lstlisting}
+std::vector<int> getParallelRadixSort(const std::vector<int> &commonVector, int lengt)
+\end{lstlisting}
+\par В файле  sort\_with\_batcher\_merge.cpp определены реализации этих функций. Для распараллеливания алгоритма использовалась директива 
+\verb|#pragma omp parallel for|, функия \newline \verb|omp_get_num_procs()| для получения числа доступных потоков,функия \verb|omp_get_thread_num()| для получения номера потока. В данной функии в переменную numberOfThread записывается число потоков. Для каждого потока в параллельной секции выделяется подмассив local, для которого выполняется последовательный вариант сортировки. Далее, в VecOfVec записываем результат выполнения сортировки.
+
+\par Сортировка подсчётом. Применяетcя для одного разряда \par
+\begin{lstlisting}
+void countingSort(std::vector<int> *array, int size, int place);
+\end{lstlisting}
+\par Последовательная реализация поразрядной сортировки \par
+\begin{lstlisting}
+void Sort(std::vector<int> *arr, int sz);
+\end{lstlisting}
+\par Разбиение массива на два подмассива. Элементы, стоящие на чётных позициях помещаются в первый массив. Элементы, стоящие на нечётных позициях помещаюся во второй массив
+\par
+\begin{lstlisting}
+void Odd_Even_Split(const std::vector<int> &arr, std::vector<int> *odd, std::vector<int> *even, int size)
+\end{lstlisting}
+
+\par Параллельный вариант функции разбиения массива по чётным и нечётным позициям. Первая директива определяет опредлеят параллельную секцию с частной переменной i-индекс в массиве. Общие переменные arr, odd, even , size - исходный массив, массив по чётным элементам, массив по нечётным эдементам, размер исходного массива.
+
+\begin{lstlisting}
+void Odd_Even_Split_Parallel(const std::vector<int> &arr, std::vector<int> *odd, std::vector<int>*even,int size)
+\end{lstlisting}
+
+\begin{lstlisting}
+#pragma omp parallel shared(arr, odd, even, size) private(i)
+  {
+#pragma omp for
+    for (i = 0; i < size / 2; i++) {
+      odd->at(i) = arr[2 * i + 1];
+      even->at(i) = arr[2 * i];
+    }
+  }
+\end{lstlisting}
+\par
+
+\par Функция для чётно-нечётного слияния Бетчера \par
+\begin{lstlisting}
+void Odd_Even_Merge(std::vector<int>* data, int f_size, int f_offset, int s_size, int s_offset)
+\end{lstlisting}
+
+\par Распараллеленный вариант функиии чётно-нечётного слияния \par
+\begin{lstlisting}
+void Odd_Even_Merge_Parallel(std::vector<int>* data, int f_size, int f_offset, int s_size, int s_offset)
+\end{lstlisting}
+
+\par Сначала вызывается распараллеленный вариант разбиения массива по чётным и нечётным позициям. Затем для каждого подмассива вызывает распараллеленный вариант функции сортировки. \par
+
+
+\subsection*{TBB}
+\addcontentsline{toc}{subsection}{TBB}
+\par Програма с использованием TBB отличается только в параллельных функциях. Для реализации параллельного алгоритма с помошью библиотеки TBB необходимо инициализировать экземпляр класса \verb|tbb::task_scheduler_init|, который служит для создания потоков и внутренних структур, необходимых планировщику потоков для работы. После этого, удобно использовать шаблонную функцию \verb|tbb::parallel_for| для реализациия распараллеливания циклов с известным числом повторений.Первый аргумент функции это некий объект - итерационное пространство, а второй это класс-функтор.
+\par Итерационное пространство представляет собой диапазон вида полуинтервала [begin,end), где begin- 0, а end- число потоков.
+\par Второй параметр - функтор, класс реализующий вычисления цикла через метод \verb|body::operator()|.
+\par 
+
+\begin{lstlisting}
+tbb::parallel_for(tbb::blocked_range<std::vector<int>::const_iterator>(
+                        commonVector.begin(), commonVector.end(), 10),
+                    [&](tbb::blocked_range<std::vector<int>::const_iterator> r) {
+                      std::vector<int> local = {r.begin(), r.end()};
+                      int size = local.size();
+                      getSequantialSort(&local,size);
+
+                      pushMutex.lock();
+                      vecOfVec.push_back(std::move(local));
+                      pushMutex.unlock();
+                    });
+\end{lstlisting}
+\par В данной реализации использованы лямбда функции. Для каждого потока создаётся вектор local, который сортируется последовательной сортировкой. В вектор результатов VecOfVec заносится результат. Для синхронизации потоков был ипользован мьютекс. \verb|pushMutex.lock();| команда, которая не даёт другим потокам вход в мьютекс, если он занят. \verb|pushMutex.lock();| команда, которая разблокирует мьютекс.
+
+
+\newpage
+
+% Подтверждение корректности
+\section*{Подтверждение корректности}
+\addcontentsline{toc}{section}{Подтверждение корректности}
+Для подтверждения корректности в программе реализован набор тестов, разработанных при помощи библиотеки для модульного тестирования Google C++ Testing Framework. Проверяются случаи сортировки векторов с использованием разного количества потоков и разного размера исходного вектора данных.
+\par Успешное прохождение всех тестов доказывает корректность работы работы программы.
+
+\newpage
+
+% Результаты экспериментов
+\section*{Результаты экспериментов}
+\addcontentsline{toc}{section}{Результаты экспериментов}
+Вычислительные эксперименты для оценки эффективности параллельного варианта
+Поразрядной сортировки с чётно-нечётным слиянием проводились на ПК со следующими характеристиками:
+\begin{itemize}
+\item Процессор: AMD Ryzen 5 3600X 6-Core Processor ;
+\item Оперативная память: 16 ГБ (DDR4), 2.133GHz;
+\item Число ядер: 6
+\item Операционная система: Windows 10 Домашняя.
+\end{itemize}
+
+\par Эксперименты проводились на 2,4,8 потоках с векторами размера 10000 элементов (см. Таблицу 1), и 20000 элементов (см. Таблицу 2).
+
+\par Результаты экспериментов представлены в Таблице 1 и в Таблице 2.
+
+\begin{table}[!h]
+\caption{Результаты вычислительных экспериментов, когда массив содержит 10000 элементов}
+\centering
+\begin{tabular}{| p{2cm} | p{3cm} | p{4cm} |}
+\hline
+Версия алгоритма & Время работы (в секундах) & Ускорение  \\[5pt]
+\hline
+Sequential        & 0.0146117       & -         \\
+OpenMP        & 0.0113578        & 1.2865          \\
+TBB       & 0.0232342        &  0.6288        \\
+
+
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[!h]
+\caption{Результаты вычислительных экспериментов, когда массив содержит 20000 элементов}
+\centering
+\begin{tabular}{| p{2cm} | p{3cm} | p{4cm} |}
+\hline
+Версия алгоритма & Время работы (в секундах) & Ускорение  \\[5pt]
+\hline
+Sequential        & 0.027642        & -         \\
+OpenMP        & 0.026200        & 1.0481          \\
+TBB       & 0.034283        & 0.8621         \\
+
+
+\hline
+\end{tabular}
+\end{table}
+
+\newpage
+
+% Выводы из результатов экспериментов
+\section*{Выводы из результатов экспериментов}
+\addcontentsline{toc}{section}{Выводы из результатов экспериментов}
+Исходя из данных полученных в результате экспериментов, можно сделать вывод, что параллельная реализация алгоритма поразрядной сортировки с слиянием Бэчера работает быстрее последовательной при реализации с помощью OpenMP. Чем больше размер вектора данных, тем значительнее прирост в производительности и тем выше ускорение. Однако при реализации с помощью TBB программа работает медленее, чем последовательная. Это обусловлено тем, что при реализации параллельной программы были использованы мьютаксы, что отрицательно сказалось на производительности.
+\newpage
+
+% Заключение
+\section*{Заключение}
+\addcontentsline{toc}{section}{Заключение}
+В результате выполнения лабораторной работы были  разработаны последовательная и параллельные реализации алгоритма поразрядной сортировки с слиянием Бэтчера. На основании полученных данных из тестов убедились в корректности разработанных алгоритмов. Параллельная версия алгоритма OpenMP оказалась быстрее чем последовательная, что доказывает успешное выполнение поставленных задач лабораторной работы.
+\newpage
+
+% Литература
+\section*{Литература}
+\addcontentsline{toc}{section}{Литература}
+\begin{enumerate}
+\item Образовательный комплекс «Введение в принципы функционирования и применения современных мультиядерных архитектур (на примере Intel Xeon Phi)» / сост.: Сиднев А.А., Сысоев А.В., Мееров И.Б. , 2013
+\item Учебный курс «Средства разработки параллельных программ для систем с общей памятью. Библиотека Intel Threading Building Blocks»  / сост.: А.А. Сиднев, А.В. Сысоев, И.Б. Мееров - Нижний Новгород, 2007 
+\item Учебный курс "Введение в методы параллельного программирования" Раздел "Параллельное программирование с использованием OpenMP"  / сост.: В.П. Гергель - Нижний Новгород, 2007 
+\item Алгоритм поразрядной сортировки \newline URL: https://intuit.ru/studies/courses/10612/1096/lecture/22924?page=3
+\end{enumerate} 
+\newpage
+
+% Приложение
+\section*{Приложение}
+\addcontentsline{toc}{section}{Приложение}
+Исходный код программ.
+\par Реализация с использованием технологии OpenMP:
+\begin{lstlisting}
+// radix_sort_omp.h
+
+// Copyright 2022 Kovalev Ruslan
+#ifndef MODULES_TASK_2_KOVALEV_R_RADIX_SORT_OMP_RADIX_SORT_OMP_H_
+#define MODULES_TASK_2_KOVALEV_R_RADIX_SORT_OMP_RADIX_SORT_OMP_H_
+
+#include <string>
+#include <vector>
+
+void vec_gen(std::vector<int>* vec, int len);
+std::vector<int> Odd_Even_Merge(const std::vector<int>& arr, int len);
+std::vector<int> getParallelRadixSort(const std::vector<int>& arr, int len);
+void countingSort(std::vector<int>* arr, int size, int place);
+std::vector<int> Odd_Even_Merge_Parallel(const std::vector<int>& arr, int len);
+
+#endif  // MODULES_TASK_2_KOVALEV_R_RADIX_SORT_OMP_RADIX_SORT_OMP_H_
+
+
+\end{lstlisting}
+\begin{lstlisting}
+// radix_sort_omp.cpp
+
+// Copyright 2022 Kovalev Ruslan
+#include <omp.h>
+#include <vector>
+#include <string>
+#include <random>
+#include <utility>
+#include <iostream>
+#include "../../../modules/task_2/kovalev_r_radix_sort_omp/radix_sort_omp.h"
+
+
+int getMax(std::vector<int> *arr, int sz) {
+  int max = arr->at(0);
+  for (int i = 1; i < sz; i++)
+    if (arr->at(i) > max) max = arr->at(i);
+  return max;
+}
+
+void vec_gen(std::vector<int>* vec, int len) {
+  std::random_device dev;
+  std::mt19937 gen(dev());
+  for (int i = 0; i < len; i++) {
+    vec->at(i) = gen() % 10000;
+  }
+}
+
+std::vector<int> Merge(std::vector<int> *arr_1, std::vector<int> *arr_2,
+                       int sz_1, int sz_2) {
+  int i = 0;
+  int j = 0;
+  int k = 0;
+  std::vector<int> res(sz_1 + sz_2);
+  while (i < sz_1 && j < sz_2) {
+    if (arr_1->at(i) < arr_2->at(j))
+      res[k++] = arr_1->at(i++);
+    else
+      res[k++] = arr_2->at(j++);
+  }
+  while (i < sz_1) res[k++] = arr_1->at(i++);
+  while (j < sz_2) res[k++] = arr_2->at(j++);
+  return res;
+}
+
+void countingSort(std::vector<int> *array, int size, int place) {
+  const int max = 10;
+  std::vector<int> output(size, 0);
+  std::vector<int> count(max, 0);
+  for (int i = 0; i < size; i++) count[(array->at(i) / place) % 10]++;
+  for (int j = 1; j < max; j++) count[j] += count[j - 1];
+
+  for (int i = size - 1; i >= 0; i--) {
+    output[count[(array->at(i) / place) % 10] - 1] = array->at(i);
+    count[(array->at(i) / place) % 10]--;
+  }
+  for (int i = 0; i < size; i++) array->at(i) = output[i];
+}
+
+void Sort(std::vector<int> *arr, int sz) {
+  int max = getMax(arr, sz);
+  for (int place = 1; max / place > 0; place *= 10)
+    countingSort(arr, sz, place);
+}
+
+void Odd_Even_Split_Parallel(const std::vector<int> &arr, std::vector<int> *odd,
+                             std::vector<int> *even, int size) {
+  int i;
+#pragma omp parallel shared(arr, odd, even, size) private(i)
+  {
+#pragma omp for
+    for (i = 0; i < size / 2; i++) {
+      odd->at(i) = arr[2 * i + 1];
+      even->at(i) = arr[2 * i];
+    }
+  }
+}
+
+void Odd_Even_Split(const std::vector<int> &arr, std::vector<int> *odd, std::vector<int> *even,
+                    int size) {
+  for (int i = 0; i < size / 2; i++) {
+    odd->at(i) = arr[2 * i + 1];
+    even->at(i) = arr[2 * i];
+  }
+}
+
+std::vector<int> Odd_Even_Merge(const std::vector<int> &arr, int len) {
+  int odd_len = len / 2;
+  int even_len = len - odd_len;
+  std::vector<int> Odd(odd_len);
+  std::vector<int> Even(even_len);
+  Odd_Even_Split(arr, &Odd, &Even, len);
+  Sort(&Odd, odd_len);
+  Sort(&Even, even_len);
+  std::vector<int> arr_1;
+  arr_1 = Merge(&Odd, &Even, odd_len, even_len);
+  for (int i = 1; i < len - 1; i += 2) {
+    if (arr_1[i] > arr_1[i + 1]) {
+      std::swap(arr_1[i], arr_1[i + 1]);
+    }
+  }
+  return arr_1;
+}
+
+std::vector<int> getParallelRadixSort(const std::vector<int> &commonVector,
+                                 int lengt) {
+  int numberOfThread = omp_get_num_procs();
+  int dataPortion = commonVector.size() / numberOfThread;
+  std::vector<std::vector<int>> vecOfVec(numberOfThread);
+#pragma omp parallel num_threads(numberOfThread)
+  {
+    int currentThread = omp_get_thread_num();
+    std::vector<int> local;
+    if (currentThread != numberOfThread - 1) {
+      local = {commonVector.begin() + currentThread * dataPortion,
+               commonVector.begin() + (currentThread + 1) * dataPortion};
+    } else {
+      local = {commonVector.begin() + currentThread * dataPortion,
+               commonVector.end()};
+    }
+    int len = local.size();
+    Sort(&local, len);
+    vecOfVec[currentThread] = local;
+  }
+  std::vector<int> resultVector = vecOfVec[0];
+  for (int i = 1; i < numberOfThread; ++i) {
+    int size_1 = resultVector.size();
+    int size_2 = vecOfVec[i].size();
+    resultVector = Merge(&resultVector, &vecOfVec[i], size_1, size_2);
+  }
+  return resultVector;
+}
+
+std::vector<int> Odd_Even_Merge_Parallel(const std::vector<int> &arr, int len) {
+  int odd_len = len / 2;
+  int even_len = len - odd_len;
+  std::vector<int> Odd(odd_len);
+  std::vector<int> Even(even_len);
+  Odd_Even_Split_Parallel(arr, &Odd, &Even, len);
+  Odd = getParallelRadixSort(Odd, odd_len);
+  Even = getParallelRadixSort(Even, even_len);
+  std::vector<int> result = Merge(&Odd, &Even, odd_len, even_len);
+  return result;
+}
+
+\end{lstlisting}
+\begin{lstlisting}
+// main.cpp
+
+// Copyright 2022 Kovalev Ruslan
+#include <gtest/gtest.h>
+#include <omp.h>
+#include <time.h>
+
+#include <vector>
+
+#include "./radix_sort_omp.h"
+
+TEST(Sequential_algorithm, radix_sort_1) {
+  std::vector<int> vec_1(101);
+  std::vector<int> vec_2(101);
+  vec_gen(&vec_1, 101);
+  vec_2 = vec_1;
+  vec_1 = Odd_Even_Merge_Parallel(vec_1, 101);
+  vec_2 = Odd_Even_Merge(vec_2, 101);
+  ASSERT_EQ(vec_1, vec_2);
+}
+
+TEST(Sequential_algorithm, radix_sort_2) {
+  std::vector<int> vec_1(40);
+  std::vector<int> vec_2(40);
+  vec_gen(&vec_1, 40);
+  vec_2 = vec_1;
+  vec_1 = Odd_Even_Merge_Parallel(vec_1, 40);
+  vec_2 = Odd_Even_Merge(vec_2, 40);
+  ASSERT_EQ(vec_1, vec_2);
+}
+
+TEST(Sequential_algorithm, radix_sort_3) {
+  std::vector<int> vec_1(100);
+  std::vector<int> vec_2(100);
+  vec_gen(&vec_1, 100);
+  vec_2 = vec_1;
+  vec_1 = Odd_Even_Merge_Parallel(vec_1, 100);
+  vec_2 = Odd_Even_Merge(vec_2, 100);
+  ASSERT_EQ(vec_1, vec_2);
+}
+
+TEST(Sequential_algorithm, radix_sort_4) {
+  std::vector<int> vec_1(90);
+  std::vector<int> vec_2(90);
+  vec_gen(&vec_1, 90);
+  vec_2 = vec_1;
+  vec_1 = Odd_Even_Merge_Parallel(vec_1, 90);
+  vec_2 = Odd_Even_Merge(vec_2, 90);
+  ASSERT_EQ(vec_1, vec_2);
+}
+
+TEST(Sequential_algorithm, radix_sort_5) {
+  std::vector<int> vec_1(30);
+  std::vector<int> vec_2(30);
+  vec_gen(&vec_1, 30);
+  vec_2 = vec_1;
+  vec_1 = Odd_Even_Merge_Parallel(vec_1, 30);
+  vec_2 = Odd_Even_Merge(vec_2, 30);
+  ASSERT_EQ(vec_1, vec_2);
+}
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
+
+\end{lstlisting}
+\begin{lstlisting}
+// radix_sort_tbb.h
+// Copyright 2022 Kovalev Ruslan
+#ifndef MODULES_TASK_3_KOVALEV_R_RADIX_SORT_TBB_RADIX_SORT_TBB_H_
+#define MODULES_TASK_3_KOVALEV_R_RADIX_SORT_TBB_RADIX_SORT_TBB_H_
+#include <string>
+#include <vector>
+
+void vec_gen(std::vector<int>* vec, int len);
+void Odd_Even_Merge(std::vector<int>* arr, int len);
+std::vector<int> getParallelShellSort(const std::vector<int>& commonVector);
+
+#endif  // MODULES_TASK_3_KOVALEV_R_RADIX_SORT_TBB_RADIX_SORT_TBB_H_
+\end{lstlisting}
+\begin{lstlisting}
+// radix_sort_tbb.cpp
+
+// Copyright 2022 Kovalev Ruslan
+#include <tbb/tbb.h>
+#include <iostream>
+#include <random>
+#include <vector>
+#include "../../../modules/task_3/kovalev_r_radix_sort_tbb/radix_sort_tbb.h"
+
+void copy_vectors(std::vector<int>* arr_1, std::vector<int>* arr_2, int sz) {
+  for (int i = 0; i < sz; i++) {
+    arr_2->at(i) = arr_1->at(i);
+  }
+}
+
+void vec_gen(std::vector<int>* vec, int len) {
+  std::random_device dev;
+  std::mt19937 gen(dev());
+  for (int i = 0; i < len; i++) {
+    vec->at(i) = gen() % 10000;
+  }
+}
+
+bool check(std::vector<int>* arr_1, std::vector<int>* arr_2, int sz) {
+  for (int i = 0; i < sz; i++) {
+    if (arr_1->at(i) != arr_2->at(i)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void Exchange(int* first, int* second) {
+  if (first > second) {
+    std::swap(first, second);
+  }
+}
+
+void Odd_Even_Split(std::vector<int>* arr, std::vector<int>* odd,
+                    std::vector<int>* even, int size) {
+  for (int i = 0; i < size / 2; i++) {
+    odd->at(i) = arr->at(2 * i + 1);
+    even->at(i) = arr->at(2 * i);
+  }
+}
+
+std::vector<int> Merge(std::vector<int>* arr_1, std::vector<int>* arr_2,
+                       int sz_1, int sz_2) {
+  int i = 0;
+  int j = 0;
+  int k = 0;
+  std::vector<int> res(sz_1 + sz_2);
+  while (i < sz_1 && j < sz_2) {
+    if (arr_1->at(i) < arr_2->at(j))
+      res[k++] = arr_1->at(i++);
+    else
+      res[k++] = arr_2->at(j++);
+  }
+  while (i < sz_1) res[k++] = arr_1->at(i++);
+  while (j < sz_2) res[k++] = arr_2->at(j++);
+  return res;
+}
+
+void Odd_Even_Split_Parallel(std::vector<int>* arr, std::vector<int>* odd,
+                             std::vector<int>* even, int size) {
+  tbb::parallel_for(tbb::blocked_range<int>(0, size / 2),
+                    [&](const tbb::blocked_range<int>& range) {
+                      for (int i = range.begin(); i != range.end(); i++) {
+                        odd->at(i) = arr->at(2 * i + 1);
+                        even->at(i) = arr->at(2 * i);
+                      }
+                    });
+}
+
+void Odd_Even_Join(std::vector<int>* arr, std::vector<int>* odd,
+                   std::vector<int>* even, int size) {
+  for (int i = 0; i < size / 2; i++) {
+    arr->at(2 * i + 1) = odd->at(i);
+    arr->at(2 * i) = even->at(i);
+  }
+}
+
+void Odd_Even_Join_Parallel(std::vector<int>* arr, std::vector<int>* odd,
+                            std::vector<int>* even, int size) {
+  tbb::parallel_for(tbb::blocked_range<int>(0, size / 2),
+                    [&](const tbb::blocked_range<int>& range) {
+                      for (int i = range.begin(); i != range.end(); i++) {
+                        arr->at(2 * i + 1) = odd->at(i);
+                        arr->at(2 * i) = even->at(i);
+                      }
+                    });
+}
+
+int getMax(std::vector<int>* arr, int sz) {
+  int max = arr->at(0);
+  for (int i = 0; i < sz; i++) {
+    if (arr->at(i) > max) max = arr->at(i);
+  }
+  return max;
+}
+
+int ParalleGetMax(std::vector<int>* arr, int sz) {
+  int max = arr->at(0);
+  tbb::parallel_for(tbb::blocked_range<int>(0, sz),
+                    [&](const tbb::blocked_range<int>& range) {
+                      for (int i = range.begin(); i != range.end(); i++) {
+                        if (arr->at(i) > max) max = arr->at(i);
+                      }
+                    });
+  return max;
+}
+
+void countingSort(std::vector<int>* arr, int size, int place) {
+  const int max = 10;
+  std::vector<int> output(size, 0);
+  std::vector<int> count(max, 0);
+  for (int i = 0; i < size; i++) count[(arr->at(i) / place) % 10]++;
+  for (int j = 1; j < max; j++) count[j] += count[j - 1];
+  for (int i = size - 1; i >= 0; i--) {
+    output[count[(arr->at(i) / place) % 10] - 1] = arr->at(i);
+    count[(arr->at(i) / place) % 10]--;
+  }
+  for (int i = 0; i < size; i++) {
+    arr->at(i) = output[i];
+  }
+}
+
+void countingSortParallel(std::vector<int>* arr, int size, int place) {
+  const int max = 10;
+  std::vector<int> output(size, 0);
+  std::vector<int> count(max, 0);
+
+  tbb::mutex pushMutex_1;
+  tbb::parallel_for(tbb::blocked_range<int>(0, size, 10),
+                    [&](const tbb::blocked_range<int>& range) {
+                      for (int i = range.begin(); i < range.end(); i++) {
+                        pushMutex_1.lock();
+                        count[(arr->at(i) / place) % 10]++;
+                        pushMutex_1.unlock();
+                      }
+                    });
+
+  tbb::mutex pushMutex_2;
+  tbb::parallel_for(tbb::blocked_range<int>(1, max, 10),
+                    [&](const tbb::blocked_range<int>& range) {
+                      for (int i = range.begin(); i < range.end(); i++) {
+                        pushMutex_2.lock();
+                        count[i] = count[i] + count[i - 1];
+                        pushMutex_2.unlock();
+                      }
+                    });
+
+  for (int i = size - 1; i >= 0; i--) {
+    output[count[(arr->at(i) / place) % 10] - 1] = arr->at(i);
+    count[(arr->at(i) / place) % 10]--;
+  }
+  tbb::parallel_for(tbb::blocked_range<int>(0, size),
+                    [&](const tbb::blocked_range<int>& range) {
+                      for (int i = range.begin(); i < range.end(); i++) {
+                        arr->at(i) = output[i];
+                      }
+                    });
+}
+
+void getSequantialSort(std::vector<int>* arr, int sz) {
+  int max = getMax(arr, sz);
+  for (int place = 1; max / place > 0; place *= 10)
+    countingSort(arr, sz, place);
+}
+
+void Odd_Even_Merge(std::vector<int>* arr, int len) {
+  int odd_len = len / 2;
+  int even_len = len - odd_len;
+  std::vector<int> Odd(odd_len);
+  std::vector<int> Even(even_len);
+  Odd_Even_Split(arr, &Odd, &Even, len);
+  getSequantialSort(&Odd, odd_len);
+  getSequantialSort(&Even, even_len);
+  // Odd_Even_Join(arr, &Odd, &Even, len);
+  std::vector<int> a=Merge(&Odd, &Even, odd_len, even_len);
+  for (int i = 1; i < len - 1; i += 2) {
+    if (a[i] > a[i + 1]) {
+      std::swap(a[i], a[i + 1]);
+    }
+  }
+}
+
+void getSortParallel(std::vector<int>* arr, int sz) {
+  int max = ParalleGetMax(arr, sz);
+  for (int place = 1; max / place > 0; place *= 10)
+    countingSortParallel(arr, sz, place);
+}
+
+std::vector<int> getParallelShellSort(const std::vector<int>& commonVector) {
+  std::vector<std::vector<int>> vecOfVec;
+  tbb::mutex pushMutex;
+
+  tbb::parallel_for(tbb::blocked_range<std::vector<int>::const_iterator>(
+                        commonVector.begin(), commonVector.end(), 10),
+                    [&](tbb::blocked_range<std::vector<int>::const_iterator> r) {
+                      std::vector<int> local = {r.begin(), r.end()};
+                      int size = local.size();
+                      getSequantialSort(&local,size);
+
+                      pushMutex.lock();
+                      vecOfVec.push_back(std::move(local));
+                      pushMutex.unlock();
+                    });
+
+  std::vector<int> resultVector = vecOfVec[0];
+  for (int i = 1; i < vecOfVec.size(); ++i) {
+    int size_1 = resultVector.size();
+    int size_2 = vecOfVec[i].size();
+    resultVector = Merge(&resultVector, &vecOfVec[i],size_1,size_2);
+  }
+
+  return resultVector;
+}
+
+std::vector<int> Odd_Even_Merge_Parallel(std::vector<int>* arr, int len) {
+
+  int odd_len = len / 2;
+  int even_len = len - odd_len;
+
+  std::vector<int> Odd(odd_len);
+  std::vector<int> Even(even_len);
+
+  Odd_Even_Split_Parallel(arr, &Odd, &Even, len);
+
+  Odd = getParallelShellSort(Odd);
+  Even = getParallelShellSort(Even);
+
+  // for (int i = 0; i < odd_len; i++) {
+  //  cout << Odd[i] << " ";
+  //}
+  // cout << endl;
+
+  // for (int j = 0; j < even_len; j++) {
+  //  cout << Even[j] << " ";
+  //}
+
+  std::vector<int> result = Merge(&Odd, &Even, odd_len, even_len);
+
+  return result;
+}
+
+\end{lstlisting}
+\begin{lstlisting}
+// main.cpp
+
+// Copyright 2022 Kovalev Ruslan
+#include <gtest/gtest.h>
+#include <iostream>
+#include <vector>
+#include <omp.h>
+#include "./radix_sort_tbb.h"
+
+
+using std::vector;
+
+TEST(Parallel, Odd_Even_Sort_4) {
+  vector<int> vec_1(1000000);
+  vec_gen(&vec_1, 1000000);
+  vector<int> vec_2 = vec_1;
+
+  double start_1;
+  double end_1;
+
+  double start_2;
+  double end_2;
+
+  start_1 = omp_get_wtime();
+  getParallelShellSort(vec_1);
+  end_1 = omp_get_wtime();
+
+  start_2 = omp_get_wtime();
+  Odd_Even_Merge(&vec_2, 1000000);
+  end_2 = omp_get_wtime();
+  ASSERT_EQ(vec_1, vec_2);
+
+  printf("Work took %f seconds\n", end_1 - start_1);
+  printf("Work took %f seconds\n", end_2 - start_2);
+
+  std::cout << end_1 - start_1 << std::endl;
+  std::cout << end_2 - start_2 << std::endl;
+}
+
+/*
+TEST(Parallel, Odd_Even_Sort_5) {
+  vector<int> vec_1(10000000);
+  vec_gen(&vec_1, 10000000);
+  vector<int> vec_2 = vec_1;
+
+  double start_1;
+  double end_1;
+
+  double start_2;
+  double end_2;
+
+  start_1 = omp_get_wtime();
+  Odd_Even_Merge_Parallel(&vec_1, 10000000);
+  end_1 = omp_get_wtime();
+
+  start_2 = omp_get_wtime();
+  Odd_Even_Merge(&vec_2, 10000000);
+  end_2 = omp_get_wtime();
+  ASSERT_EQ(vec_1, vec_2);
+
+  printf("Work took %f seconds\n", end_1 - start_1);
+  printf("Work took %f seconds\n", end_2 - start_2);
+
+  std::cout << end_1 - start_1 << std::endl;
+  std::cout << end_2 - start_2 << std::endl;
+}
+
+*/
+
+/*
+TEST(Parallel, Odd_Even_Sort_3) {
+  vector<int> vec_1(1000000);
+  vec_gen(&vec_1, 1000000);
+  vector<int> vec_2 = vec_1;
+  Odd_Even_Merge_Parallel(vec_1, 1000000);
+  Odd_Even_Merge(vec_2, 1000000);
+  ASSERT_EQ(vec_1, vec_2);
+}
+*/
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
+\end{lstlisting}
+\end{document}

@@ -26,11 +26,11 @@
 		keywordstyle=\color{blue}\ttfamily,
 		stringstyle=\color{red}\ttfamily,
 		commentstyle=\color{green}\ttfamily,
-		morecomment=[l][\color{red}]{\#}, 
+		morecomment=[l][\color{red}]{\#},
 		tabsize=4,
 		breaklines=true,
   		breakatwhitespace=true,
-  		title=\lstname,       
+  		title=\lstname,
 }
 
 \makeatletter
@@ -196,7 +196,7 @@ void Odd_Even_Merge_Parallel(std::vector<int>* data, int f_size, int f_offset, i
 \par Програма с использованием TBB отличается только в параллельных функциях. Для реализации параллельного алгоритма с помошью библиотеки TBB необходимо инициализировать экземпляр класса \verb|tbb::task_scheduler_init|, который служит для создания потоков и внутренних структур, необходимых планировщику потоков для работы. После этого, удобно использовать шаблонную функцию \verb|tbb::parallel_for| для реализациия распараллеливания циклов с известным числом повторений.Первый аргумент функции это некий объект - итерационное пространство, а второй это класс-функтор.
 \par Итерационное пространство представляет собой диапазон вида полуинтервала [begin,end), где begin- 0, а end- число потоков.
 \par Второй параметр - функтор, класс реализующий вычисления цикла через метод \verb|body::operator()|.
-\par 
+\par
 
 \begin{lstlisting}
 tbb::parallel_for(tbb::blocked_range<std::vector<int>::const_iterator>(
